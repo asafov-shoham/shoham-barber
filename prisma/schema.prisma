@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Service {
+  id          String    @id @default(cuid())
+  name        String
+  price       Float
+  duration    Int
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id])
+  date      String
+  time      String
+  status    String   @default("PENDING")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteContent {
+  key       String   @id
+  value     String
+  label     String
+  updatedAt DateTime @updatedAt
+}
+
+model WorkingSchedule {
+  id          String   @id @default(cuid())
+  workingDays String   @default("0,1,2,3,4,5")
+  startHour   Int      @default(9)
+  endHour     Int      @default(19)
+  slotMinutes Int      @default(30)
+  updatedAt   DateTime @updatedAt
+}
+
+/// A blocked slot — either a full day or a specific hour range on a specific date.
+model BlockedSlot {
+  id        String   @id @default(cuid())
+  date      String   // yyyy-MM-dd
+  startTime String?  // HH:MM — null = whole day blocked
+  endTime   String?  // HH:MM — null = whole day blocked
+  reason    String?
+  createdAt DateTime @default(now())
+}

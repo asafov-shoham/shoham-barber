@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 60 9% 96%;
+    --card: 0 0% 8%;
+    --card-foreground: 60 9% 96%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 60 9% 96%;
+    --primary: 43 56% 54%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 11%;
+    --secondary-foreground: 60 9% 96%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 43 56% 54%;
+    --accent-foreground: 0 0% 4%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 13%;
+    --ring: 43 56% 54%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground font-sans antialiased; background-color: #0A0A0A; }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #C9A84C 0%, #E8C97D 50%, #C9A84C 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .surface { background: #141414; border: 1px solid rgba(255,255,255,0.06); }
+  .surface-2 { background: #1C1C1C; border: 1px solid rgba(255,255,255,0.06); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #0A0A0A; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.5); }
+}
+
+/* react-day-picker RTL + dark overrides */
+.rdp {
+  --rdp-accent-color: #C9A84C !important;
+  --rdp-background-color: rgba(201,168,76,0.1) !important;
+  margin: 0 !important;
+  direction: rtl;
+}
+.rdp-day_selected:not([disabled]) {
+  background-color: #C9A84C !important;
+  color: #0A0A0A !important;
+  font-weight: 700 !important;
+}
+.rdp-day_today:not(.rdp-day_selected) { color: #C9A84C !important; font-weight: 700; }
+.rdp-day:hover:not([disabled]):not(.rdp-day_selected) { background-color: rgba(201,168,76,0.1) !important; }
+.rdp-head_cell {
+  color: rgba(255,255,255,0.4) !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+}
+.rdp-day { color: rgba(255,255,255,0.85) !important; border-radius: 8px !important; transition: all 0.15s ease !important; }
+.rdp-day[disabled] { color: rgba(255,255,255,0.2) !important; }
+.rdp-caption_label {
+  color: white !important;
+  font-family: var(--font-display) !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+}
+.rdp-nav_button { color: rgba(255,255,255,0.5) !important; transition: color 0.15s !important; }
+.rdp-nav_button:hover { color: #C9A84C !important; background: transparent !important; }
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+.shimmer-bg {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0) 100%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
