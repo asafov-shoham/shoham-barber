@@ -94,3 +94,45 @@
   background-size: 1000px 100%;
   animation: shimmer 2s infinite linear;
 }
+
+/* ── נגישות — WCAG 2.1 AA ──────────────────────────────────────── */
+
+/* פוקוס ברור לניווט מקלדת */
+:focus-visible {
+  outline: 2px solid #C9A84C !important;
+  outline-offset: 3px !important;
+  border-radius: 4px;
+}
+
+/* הסר outline ברירת מחדל רק כשלא מקלדת */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip link */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.focus\:not-sr-only:focus {
+  position: fixed;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ניגודיות מינימלית לטקסט משני */
+::placeholder {
+  opacity: 0.5;
+}
