@@ -11,6 +11,7 @@ import ServicesPanel from './ServicesPanel'
 import ContentEditor from './ContentEditor'
 import SchedulePanel from './SchedulePanel'
 import BlockedDatesPanel from './BlockedDatesPanel'
+import CustomerHistoryPanel from './CustomerHistoryPanel'
 
 interface Props {
   initialBookings: Booking[]
@@ -18,7 +19,7 @@ interface Props {
   stats: { todayCount: number; todayRevenue: number; totalBookings: number; pendingCount: number }
 }
 
-type ActiveTab = 'overview' | 'bookings' | 'services' | 'schedule' | 'blocked' | 'analytics' | 'content'
+type ActiveTab = 'overview' | 'bookings' | 'services' | 'schedule' | 'blocked' | 'analytics' | 'customers' | 'content'
 
 export default function AdminDashboard({ initialBookings, initialServices, stats }: Props) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview')
@@ -33,12 +34,13 @@ export default function AdminDashboard({ initialBookings, initialServices, stats
     { id: 'schedule',  label: 'שעות עבודה',    icon: <Clock className="w-4 h-4" /> },
     { id: 'blocked',   label: 'ימים חסומים',    icon: <CalendarOff className="w-4 h-4" /> },
     { id: 'analytics', label: 'אנליטיקה',       icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'customers', label: 'לקוחות',          icon: <Users className="w-4 h-4" /> },
     { id: 'content',   label: 'עריכת תכנים',   icon: <FileText className="w-4 h-4" /> },
   ]
 
   const tabLabels: Record<ActiveTab, string> = {
     overview: 'סקירה כללית', bookings: 'הזמנות', services: 'שירותים',
-    schedule: 'שעות עבודה', blocked: 'ימים חסומים', analytics: 'אנליטיקה', content: 'עריכת תכנים',
+    schedule: 'שעות עבודה', blocked: 'ימים חסומים', analytics: 'אנליטיקה', customers: 'לקוחות', content: 'עריכת תכנים',
   }
 
   const handleLogout = async () => {
@@ -210,6 +212,7 @@ export default function AdminDashboard({ initialBookings, initialServices, stats
           {activeTab === 'schedule'  && <SchedulePanel />}
           {activeTab === 'blocked'   && <BlockedDatesPanel />}
           {activeTab === 'analytics' && <AnalyticsPanel bookings={bookings} services={services} />}
+          {activeTab === 'customers' && <CustomerHistoryPanel bookings={bookings} />}
           {activeTab === 'content'   && <ContentEditor />}
         </div>
       </main>

@@ -1,132 +1,206 @@
 'use client'
 
 import { useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { format, parseISO, subDays } from 'date-fns'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
+import { format, parseISO, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns'
 import { he } from 'date-fns/locale'
+import { TrendingUp, TrendingDown, Users, Scissors, Clock, Repeat2 } from 'lucide-react'
 import { Booking, Service } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 
 interface Props { bookings: Booking[]; services: Service[] }
 
-const GOLD = ['#C9A84C', '#E8C97D', '#A67C30', '#D4B870', '#8B6520']
+const GOLD = ['#C9A84C','#E8C97D','#A67C30','#D4B870','#8B6520','#F0D98A']
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="px-3 py-2 rounded-xl text-xs" style={{ background: '#1C1C1C', border: '1px solid rgba(201,168,76,0.2)' }}>
-        <div className="text-white/50 mb-1">{label}</div>
-        <div style={{ color: '#C9A84C' }}>{payload[0].value} הזמנות</div>
+function StatCard({ label, value, sub, icon, trend }: { label: string; value: string; sub?: string; icon: React.ReactNode; trend?: number }) {
+  return (
+    <div className="p-5 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.1)', color: '#C9A84C' }}>{icon}</div>
+        {trend !== undefined && (
+          <div className="flex items-center gap-1 text-xs" style={{ color: trend >= 0 ? '#22c55e' : '#ef4444' }}>
+            {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            {Math.abs(trend)}%
+          </div>
+        )}
       </div>
-    )
-  }
-  return null
+      <div className="text-2xl font-semibold mb-0.5">{value}</div>
+      <div className="text-xs text-white/35">{label}</div>
+      {sub && <div className="text-xs text-white/20 mt-0.5">{sub}</div>}
+    </div>
+  )
+}
+
+const Tip = ({ active, payload, label, suffix = '' }: any) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="px-3 py-2 rounded-xl text-xs" style={{ background: '#1C1C1C', border: '1px solid rgba(201,168,76,0.2)' }}>
+      <div className="text-white/50 mb-1">{label}</div>
+      <div style={{ color: '#C9A84C' }}>{payload[0].value}{suffix}</div>
+    </div>
+  )
 }
 
 export default function AnalyticsPanel({ bookings, services }: Props) {
-  const bookingsByDay = useMemo(() => {
+  const active = bookings.filter(b => b.status !== 'CANCELLED')
+  const now = new Date()
+
+  // ── Revenue helpers ─────────────────────────────────────────────────────────
+  const revenue = (list: Booking[]) => list.reduce((s, b) => s + (b.service?.price ?? 0), 0)
+
+  // ── This month vs last month ─────────────────────────────────────────────────
+  const thisMonthRange = { start: startOfMonth(now), end: endOfMonth(now) }
+  const lastMonthRange = { start: startOfMonth(subDays(startOfMonth(now), 1)), end: endOfMonth(subDays(startOfMonth(now), 1)) }
+
+  const thisMonthBookings = active.filter(b => isWithinInterval(parseISO(b.date), thisMonthRange))
+  const lastMonthBookings = active.filter(b => isWithinInterval(parseISO(b.date), lastMonthRange))
+
+  const thisMonthRev = revenue(thisMonthBookings)
+  const lastMonthRev = revenue(lastMonthBookings)
+  const revTrend = lastMonthRev > 0 ? Math.round(((thisMonthRev - lastMonthRev) / lastMonthRev) * 100) : 0
+
+  const thisMonthCount = thisMonthBookings.length
+  const lastMonthCount = lastMonthBookings.length
+  const countTrend = lastMonthCount > 0 ? Math.round(((thisMonthCount - lastMonthCount) / lastMonthCount) * 100) : 0
+
+  // ── Avg ticket ──────────────────────────────────────────────────────────────
+  const avgTicket = active.length > 0 ? revenue(active) / active.length : 0
+
+  // ── Repeat customers ────────────────────────────────────────────────────────
+  const phoneCounts = active.reduce((acc, b) => { acc[b.phone] = (acc[b.phone] || 0) + 1; return acc }, {} as Record<string, number>)
+  const repeatCustomers = Object.values(phoneCounts).filter(c => c > 1).length
+  const totalCustomers = Object.keys(phoneCounts).length
+  const retentionRate = totalCustomers > 0 ? Math.round((repeatCustomers / totalCustomers) * 100) : 0
+
+  // ── Daily revenue last 14 days ───────────────────────────────────────────────
+  const dailyRevenue = useMemo(() => {
     const days: Record<string, number> = {}
     for (let i = 13; i >= 0; i--) {
-      const d = format(subDays(new Date(), i), 'yyyy-MM-dd')
+      const d = format(subDays(now, i), 'yyyy-MM-dd')
       days[d] = 0
     }
-    bookings.forEach((b) => { if (days[b.date] !== undefined) days[b.date]++ })
-    return Object.entries(days).map(([date, count]) => ({
+    active.forEach(b => { if (days[b.date] !== undefined) days[b.date] += b.service?.price ?? 0 })
+    return Object.entries(days).map(([date, rev]) => ({
       date: format(parseISO(date), 'd/M', { locale: he }),
-      הזמנות: count,
+      הכנסה: rev,
     }))
   }, [bookings])
 
-  const servicePopularity = useMemo(() => {
-    const counts: Record<string, { name: string; count: number }> = {}
-    bookings.forEach((b) => {
-      if (!counts[b.serviceId]) counts[b.serviceId] = { name: b.service.name, count: 0 }
-      counts[b.serviceId].count++
+  // ── Service breakdown ────────────────────────────────────────────────────────
+  const serviceStats = useMemo(() => {
+    const map: Record<string, { name: string; count: number; revenue: number }> = {}
+    active.forEach(b => {
+      if (!map[b.serviceId]) map[b.serviceId] = { name: b.service?.name ?? '', count: 0, revenue: 0 }
+      map[b.serviceId].count++
+      map[b.serviceId].revenue += b.service?.price ?? 0
     })
-    return Object.values(counts).sort((a, b) => b.count - a.count)
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue)
   }, [bookings])
 
+  // ── Peak hours ───────────────────────────────────────────────────────────────
   const peakHours = useMemo(() => {
-    const hours: Record<string, number> = {}
-    for (let h = 9; h < 19; h++) hours[`${String(h).padStart(2, '0')}:00`] = 0
-    bookings.forEach((b) => { const hour = b.time.split(':')[0] + ':00'; if (hours[hour] !== undefined) hours[hour]++ })
-    return Object.entries(hours).map(([time, count]) => ({ time, הזמנות: count }))
+    const hours: Record<number, number> = {}
+    for (let h = 8; h <= 19; h++) hours[h] = 0
+    active.forEach(b => {
+      const h = parseInt(b.time.split(':')[0])
+      if (hours[h] !== undefined) hours[h]++
+    })
+    return Object.entries(hours).map(([h, count]) => ({ שעה: `${h}:00`, תורים: count }))
   }, [bookings])
 
-  const totalRevenue = bookings.filter((b) => b.status === 'COMPLETED').reduce((sum, b) => sum + b.service.price, 0)
+  // ── Day of week ──────────────────────────────────────────────────────────────
+  const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת']
+  const byDay = useMemo(() => {
+    const days = Array(7).fill(0)
+    active.forEach(b => { days[parseISO(b.date).getDay()]++ })
+    return days.map((count, i) => ({ יום: dayNames[i], תורים: count }))
+  }, [bookings])
+
+  // ── Best service ─────────────────────────────────────────────────────────────
+  const bestService = serviceStats[0]
 
   return (
     <div className="space-y-6">
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-5">
-        {[
-          { label: 'סה״כ הכנסות', value: formatCurrency(totalRevenue), note: 'תורים שהושלמו' },
-          { label: 'ממוצע יומי', value: (bookings.length / 14).toFixed(1), note: '14 הימים האחרונים' },
-          { label: 'שירות מוביל', value: servicePopularity[0]?.name || '—', note: `${servicePopularity[0]?.count || 0} הזמנות` },
-        ].map((card, i) => (
-          <motion.div key={card.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="p-6 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="text-xs text-white/30 mb-2">{card.label}</div>
-            <div className="font-display text-2xl font-semibold mb-1 truncate">{card.value}</div>
-            <div className="text-xs" style={{ color: '#C9A84C' }}>{card.note}</div>
-          </motion.div>
-        ))}
+      <h2 className="font-display text-2xl font-medium">אנליטיקה חכמה</h2>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard label="הכנסות החודש" value={`₪${thisMonthRev.toLocaleString()}`} sub={`החודש שעבר: ₪${lastMonthRev.toLocaleString()}`} icon={<span className="text-base">₪</span>} trend={revTrend} />
+        <StatCard label="תורים החודש" value={String(thisMonthCount)} sub={`החודש שעבר: ${lastMonthCount}`} icon={<Scissors className="w-4 h-4" />} trend={countTrend} />
+        <StatCard label="ממוצע לתור" value={`₪${Math.round(avgTicket)}`} sub="על פני כל ההיסטוריה" icon={<TrendingUp className="w-4 h-4" />} />
+        <StatCard label="לקוחות חוזרים" value={`${retentionRate}%`} sub={`${repeatCustomers} מתוך ${totalCustomers} לקוחות`} icon={<Repeat2 className="w-4 h-4" />} />
+        <StatCard label="סה״כ לקוחות" value={String(totalCustomers)} sub="לקוחות ייחודיים" icon={<Users className="w-4 h-4" />} />
+        <StatCard label="שירות מוביל" value={bestService?.name ?? '—'} sub={bestService ? `₪${bestService.revenue.toLocaleString()} הכנסות` : ''} icon={<Scissors className="w-4 h-4" />} />
       </div>
 
-      {/* Bookings over time */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="p-6 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <h3 className="font-display text-lg font-medium mb-6">הזמנות — 14 הימים האחרונים</h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={bookingsByDay} barCategoryGap="30%">
-            <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+      {/* Revenue chart */}
+      <div className="p-5 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="text-sm font-medium mb-4 text-white/70">הכנסות — 14 ימים אחרונים</div>
+        <ResponsiveContainer width="100%" height={180}>
+          <LineChart data={dailyRevenue}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
             <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={20} />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-            <Bar dataKey="הזמנות" fill="#C9A84C" radius={[6, 6, 0, 0]} />
-          </BarChart>
+            <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${v}`} />
+            <Tooltip content={<Tip suffix=" ₪" />} />
+            <Line type="monotone" dataKey="הכנסה" stroke="#C9A84C" strokeWidth={2} dot={false} />
+          </LineChart>
         </ResponsiveContainer>
-      </motion.div>
+      </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* Peak Hours */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="p-6 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <h3 className="font-display text-lg font-medium mb-6">שעות שיא</h3>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={peakHours} barCategoryGap="30%">
-              <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={20} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="הזמנות" fill="rgba(201,168,76,0.6)" radius={[4, 4, 0, 0]} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Peak hours */}
+        <div className="p-5 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="text-sm font-medium mb-4 text-white/70">שעות עומס</div>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={peakHours}>
+              <XAxis dataKey="שעה" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip content={<Tip />} />
+              <Bar dataKey="תורים" fill="#C9A84C" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
 
-        {/* Service Breakdown */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="p-6 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <h3 className="font-display text-lg font-medium mb-6">פופולריות שירותים</h3>
-          {servicePopularity.length === 0 ? (
-            <div className="flex items-center justify-center h-40 text-white/30 text-sm">אין נתונים עדיין</div>
-          ) : (
-            <div className="space-y-3">
-              {servicePopularity.map((service, i) => {
-                const pct = bookings.length ? Math.round((service.count / bookings.length) * 100) : 0
-                return (
-                  <div key={service.name}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-white/40 ml-2">{service.count} × ({pct}%)</span>
-                      <span className="text-sm text-white/70 truncate">{service.name}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                      <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ delay: 0.5 + i * 0.1, duration: 0.6 }} style={{ background: GOLD[i % GOLD.length] }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </motion.div>
+        {/* By day of week */}
+        <div className="p-5 rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="text-sm font-medium mb-4 text-white/70">תורים לפי יום שבוע</div>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={byDay}>
+              <XAxis dataKey="יום" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip content={<Tip />} />
+              <Bar dataKey="תורים" fill="#A67C30" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
+
+      {/* Service breakdown table */}
+      {serviceStats.length > 0 && (
+        <div className="rounded-2xl overflow-hidden" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-5 py-4 text-sm font-medium text-white/70" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>פירוט לפי שירות</div>
+          <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+            {serviceStats.map((s, i) => {
+              const maxRev = serviceStats[0].revenue
+              const pct = maxRev > 0 ? (s.revenue / maxRev) * 100 : 0
+              return (
+                <div key={s.name} className="px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: GOLD[i % GOLD.length] }} />
+                      <span className="text-sm font-medium">{s.name}</span>
+                    </div>
+                    <div className="text-sm text-white/50">{s.count} תורים · <span style={{ color: '#C9A84C' }}>₪{s.revenue.toLocaleString()}</span></div>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: GOLD[i % GOLD.length] }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

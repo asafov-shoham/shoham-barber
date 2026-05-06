@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { notifyAdmin, notifyCustomer } from '@/lib/notifications'
+import { randomBytes } from 'crypto'
 
 const CreateBookingSchema = z.object({
   name: z.string().min(2),
@@ -36,28 +37,30 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const parsed = CreateBookingSchema.safeParse(body)
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'נתונים לא תקינים' }, { status: 400 })
-    }
+    if (!parsed.success) return NextResponse.json({ error: 'נתונים לא תקינים' }, { status: 400 })
+
     const { name, phone, email, serviceId, date, time, notes } = parsed.data
     const service = await prisma.service.findUnique({ where: { id: serviceId } })
     if (!service) return NextResponse.json({ error: 'שירות לא נמצא' }, { status: 404 })
-    const existing = await prisma.booking.findFirst({
-      where: { date, time, status: { notIn: ['CANCELLED'] } },
-    })
+
+    const existing = await prisma.booking.findFirst({ where: { date, time, status: { notIn: ['CANCELLED'] } } })
     if (existing) return NextResponse.json({ error: 'השעה כבר תפוסה' }, { status: 409 })
+
+    const cancelToken = randomBytes(24).toString('hex')
+
     const booking = await prisma.booking.create({
-      data: { name: name.trim(), phone: phone.trim(), email: email?.trim() || null, serviceId, date, time, notes: notes?.trim() || null, status: 'PENDING' },
+      data: { name: name.trim(), phone: phone.trim(), email: email?.trim() || null, serviceId, date, time, notes: notes?.trim() || null, status: 'PENDING', cancelToken },
       include: { service: true },
     })
 
-    // Fire-and-forget notifications (don't let failures block the response)
     const payload = {
-      customerName:  booking.name,
+      id: booking.id,
+      cancelToken: booking.cancelToken ?? undefined,
+      customerName: booking.name,
       customerPhone: booking.phone,
-      serviceName:   booking.service.name,
-      date:          booking.date,
-      time:          booking.time,
+      serviceName: booking.service.name,
+      date: booking.date,
+      time: booking.time,
     }
     Promise.all([notifyAdmin(payload), notifyCustomer(payload)]).catch(console.error)
 
