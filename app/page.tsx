@@ -8,7 +8,7 @@ import { Clock, MapPin, Phone, ChevronLeft, Instagram } from 'lucide-react'
 import { Service } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 
-const TEAL  = '#5BAFCA'
+const TEAL  = '#9E9E9E'
 const GOLD  = '#C9A84C'
 const GOLDE = '#E8C97D'
 
@@ -140,18 +140,7 @@ export default function LandingPage() {
             </a>
           </motion.div>
 
-          {/* Stat */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-16 flex justify-center gap-12">
-            <div className="text-center">
-              <div className="font-display text-3xl font-semibold" style={{ color: GOLD }}>{c('stat_clients')}</div>
-              <div className="text-xs text-white/40 mt-1">{c('stat_clients_label')}</div>
-            </div>
-            <div className="w-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-            <div className="text-center">
-              <div className="font-display text-3xl font-semibold" style={{ color: TEAL }}>100%</div>
-              <div className="text-xs text-white/40 mt-1">מקצועיות</div>
-            </div>
-          </motion.div>
+
         </div>
       </section>
 
