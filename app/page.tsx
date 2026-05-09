@@ -21,16 +21,15 @@ const DEFAULT_CONTENT: Record<string, string> = {
   hero_main: 'כל תספורת היא יצירה, וכל ביקור הוא חוויה',
   hero_cta_primary: 'הזמן תור עכשיו',
   hero_cta_secondary: 'לצפייה בשירותים',
-  stat_clients: '+50', stat_clients_label: 'לקוחות מרוצים',
   services_title: 'השירותים שלנו', services_cta: 'הזמן כל שירות',
   location_title: 'בוא לבקר',
-  location_desc: 'אנחנו ממוקמים בלב מצפה רמון. בואו ספונטנית או הזמינו תור מראש.',
-  address: 'רחוב הראשי 1, מצפה רמון',
-  hours: 'ראשון–חמישי: 09:00–19:00\nשישי: 09:00–15:00\nשבת: סגור',
+  location_desc: 'אנחנו ממוקמים מצפה רמון. הזמינו תור מראש.',
+  address: 'נחל ניצנה 6, מצפה רמון',
+  hours: 'מה שפנוי.',
   phone: '052-553-3730',
   cta_title: 'מוכן להיראות במיטבך?',
   cta_subtitle: 'הזמן תור תוך פחות מדקה. ללא צורך בחשבון.',
-  cta_button: 'הזמן עכשיו — בחינם',
+  cta_button: 'הזמן עכשיו',
   footer_name: 'Shoham Asafov Barber Shop',
 }
 
@@ -229,7 +228,7 @@ export default function LandingPage() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="rounded-2xl overflow-hidden h-64 sm:h-80" style={{ border: `1px solid rgba(91,175,202,0.15)`, boxShadow: `0 0 30px rgba(91,175,202,0.05)` }}>
-              <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3395.5!2d34.8014!3d30.6057!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x15070f9b8e0f3b1f%3A0x1234!2sMitzpe%20Ramon%2C%20Israel!5e0!3m2!1sen!2sus!4v1234567890"
+              <iframe src="https://maps.google.com/maps?q=נחל+ניצנה+6+מצפה+רמון+ישראל&output=embed&hl=he&zoom=16"
                 width="100%" height="100%" style={{ border: 0, filter: 'invert(0.9) hue-rotate(180deg)' }}
                 allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade"
               />
